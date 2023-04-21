@@ -5,7 +5,6 @@ from social_media.models import (
     Commentary,
     Profile,
     Post,
-    # Tag
 )
 
 
