@@ -125,6 +125,18 @@ class PostViewSet(
 
         return queryset
 
+    @action(detail=True, methods=['post'])
+    def post_comment(self, request, pk=None):
+        post = self.get_object()
+        serializer = CommentarySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(post=post, user=self.request.user)
+            return Response(
+                {"message": "comment posted"},
+                status=status.HTTP_200_OK
+        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class CreatePostView(generics.CreateAPIView):
     serializer_class = PostSerializer

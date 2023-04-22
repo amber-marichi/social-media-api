@@ -18,6 +18,7 @@ def get_image_file_path(instance, filename) -> str:
     fullname = f"{slugify(filename)}-{uuid.uuid4()}{extension}"
     return os.path.join("upload/", dir, fullname)
 
+
 class Profile(models.Model):
     user = models.OneToOneField(
         AUTH_USER_MODEL,
