@@ -9,10 +9,14 @@ from social_media_api.settings import AUTH_USER_MODEL
 def get_image_file_path(instance, filename) -> str:
     _, extension = os.path.splitext(filename)
     print(instance.__dict__)
-    filename = f"{slugify(instance.username)}-{uuid.uuid4()}{extension}"
-
-    return os.path.join("upload/users/", filename)
-
+    filename = getattr(instance, "username", None)
+    if filename is not None:
+        dir = "users"
+    else:
+        filename = "post"
+        dir = "attachments"
+    fullname = f"{slugify(filename)}-{uuid.uuid4()}{extension}"
+    return os.path.join("upload/", dir, fullname)
 
 class Profile(models.Model):
     user = models.OneToOneField(
@@ -63,11 +67,11 @@ class Post(models.Model):
     #     blank=True,
     #     related_name="tasks"
     # )
-    # attachment = models.ImageField(
-    #     upload_to="post_attachements",
-    #     null=True,
-    #     blank=True
-    # )
+    attachment = models.ImageField(
+        upload_to=get_image_file_path,
+        null=True,
+        blank=True
+    )
 
     def __str__(self) -> str:
         return f"post # {self.id}"

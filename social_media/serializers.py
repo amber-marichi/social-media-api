@@ -70,7 +70,7 @@ class PostSerializer(serializers.ModelSerializer):
             "created_at",
             "body",
             "tags",
-            # "attachement",
+            "attachment",
             # "comments",
         )
         read_only_fields = ("id", "created_at",)
