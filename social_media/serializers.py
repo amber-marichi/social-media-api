@@ -29,7 +29,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "contacts",
             "location",
             "bio",
-            # "profile_picture",
+            "profile_picture",
         )
 
 
@@ -54,7 +54,7 @@ class ProfileDetailSerializer(ProfileSerializer):
             "contacts",
             "location",
             "bio",
-            # "profile_picture",
+            "profile_picture",
             "follows",
             "followed_by"
         )

@@ -1,6 +1,17 @@
+import os
+import uuid
 from django.db import models
+from django.utils.text import slugify
 
 from social_media_api.settings import AUTH_USER_MODEL
+
+
+def get_image_file_path(instance, filename) -> str:
+    _, extension = os.path.splitext(filename)
+    print(instance.__dict__)
+    filename = f"{slugify(instance.username)}-{uuid.uuid4()}{extension}"
+
+    return os.path.join("upload/users/", filename)
 
 
 class Profile(models.Model):
@@ -15,11 +26,11 @@ class Profile(models.Model):
     contacts = models.CharField(max_length=100, null=True, blank=True)
     location = models.CharField(max_length=100, null=True, blank=True)
     bio = models.CharField(max_length=255, null=True, blank=True)
-    # profile_picture = models.ImageField(
-    #     upload_to="profile_pictures",
-    #     null=True,
-    #     blank=True
-    # )
+    profile_picture = models.ImageField(
+        upload_to=get_image_file_path,
+        null=True,
+        blank=True
+    )
     follows = models.ManyToManyField(
         to=AUTH_USER_MODEL,
         blank=True,
