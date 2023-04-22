@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 
 from social_media.models import (
     Commentary,
@@ -18,12 +19,6 @@ class CommentarySerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    follows = serializers.SlugRelatedField(
-        many=True, read_only=True, slug_field="username"
-    )
-    followed_by = serializers.SlugRelatedField(
-        many=True, read_only=True, slug_field="username"
-    )
     class Meta:
         model = Profile
         fields = (
@@ -31,13 +26,37 @@ class ProfileSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "contacts",
+            "location",
+            "bio",
+            # "profile_picture",
+        )
+
+
+class FollowerSerializer(serializers.ModelSerializer):
+    profilename = serializers.CharField(source="profile.username", read_only=True)
+    class Meta:
+        model = get_user_model()
+        fields = ("profilename",)
+
+
+class ProfileDetailSerializer(ProfileSerializer):
+    follows = FollowerSerializer(many=True, read_only=True)
+    followed_by = FollowerSerializer(many=True, read_only=True)
+    class Meta:
+        model = Profile
+        fields = (
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "contacts",
             "location",
             "bio",
             # "profile_picture",
             "follows",
             "followed_by"
         )
-        
 
 
 class PostSerializer(serializers.ModelSerializer):
