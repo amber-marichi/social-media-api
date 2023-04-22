@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Count
+from django.db.models import Count, QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, mixins, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -36,7 +36,7 @@ class ProfileViewSet(
 
         return ProfileSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         username = self.request.query_params.get("username")
         location = self.request.query_params.get("location")
         first_name = self.request.query_params.get("first_name")
@@ -55,13 +55,16 @@ class ProfileViewSet(
 
         return queryset.distinct()
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
     @action(
         methods=["POST"],
         detail=True,
         url_path="upload-profile-picture",
         permission_classes=[IsAuthenticated],
     )
-    def upload_profile_picture(self, reques, pk=None):
+    def upload_profile_picture(self, reques, pk=None) -> Response:
         profile = self.get_object()
         serializer = self.get_serializer(profile, data=reques.data)
         if serializer.is_valid():
@@ -69,16 +72,13 @@ class ProfileViewSet(
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
     @action(
         methods=["POST"],
         detail=True,
         url_path="toggle-follow",
         permission_classes=[IsAuthenticated],
     )
-    def toggle_follow(self, request, pk=None):
+    def toggle_follow(self, request, pk=None) -> Response:
         own_profile = request.user.profile
         follow_user = get_user_model().objects.get(profile__id=pk)
         if follow_user in own_profile.follows.all():
@@ -103,6 +103,19 @@ class PostListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(posted_by=self.request.user)
+    
+    def get_queryset(self) -> QuerySet:
+        tags = self.request.query_params.get("tags")
+        user = self.request.query_params.get("user")
+
+        queryset = self.queryset
+
+        if tags:
+            queryset = queryset.filter(tags__icontains=tags)
+        if user:
+            queryset = queryset.filter(posted_by__profile_username__icontains=user)
+
+        return queryset
 
 
 class PostDetailView(generics.RetrieveUpdateDestroyAPIView):

@@ -3,7 +3,6 @@ from rest_framework import routers
 
 from social_media.views import (
     ProfileViewSet,
-    FollowView,
     PostListCreateView,
     PostDetailView,
     CommentPostView,
