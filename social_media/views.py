@@ -105,17 +105,17 @@ class PostListCreateView(generics.ListCreateAPIView):
         serializer.save(posted_by=self.request.user)
     
     def get_queryset(self) -> QuerySet:
-        tags = self.request.query_params.get("tags")
+        tag = self.request.query_params.get("tags")
         user = self.request.query_params.get("user")
 
         queryset = self.queryset
 
-        if tags:
-            queryset = queryset.filter(tags__icontains=tags)
+        if tag:
+            queryset = queryset.filter(tags__icontains=tag)
         if user:
-            queryset = queryset.filter(posted_by__profile_username__icontains=user)
+            queryset = queryset.filter(posted_by__profile__username__icontains=user)
 
-        return queryset
+        return queryset.distinct()
 
 
 class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
