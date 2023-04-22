@@ -4,10 +4,15 @@ from social_media_api.settings import AUTH_USER_MODEL
 
 
 class Profile(models.Model):
-    user = models.OneToOneField(AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile"
+    )
     username = models.CharField(max_length=100, unique=True)
     first_name = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
+    contacts = models.CharField(max_length=100, null=True, blank=True)
     location = models.CharField(max_length=100, null=True, blank=True)
     bio = models.CharField(max_length=255, null=True, blank=True)
     # profile_picture = models.ImageField(
@@ -16,7 +21,7 @@ class Profile(models.Model):
     #     blank=True
     # )
     follows = models.ManyToManyField(
-        to="self",
+        to=AUTH_USER_MODEL,
         blank=True,
         symmetrical=False,
         related_name="followed_by",
