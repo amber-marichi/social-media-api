@@ -8,7 +8,6 @@ from rest_framework.decorators import action
 from rest_framework.serializers import Serializer
 
 from social_media.models import (
-    Commentary,
     Profile,
     Post
 )
@@ -19,12 +18,6 @@ from social_media.serializers import (
     PostSerializer,
     PostDetailSerializer
 )
-
-
-class CommentaryViewSet(viewsets.ModelViewSet):
-    queryset = Commentary.objects.all()
-    serializer_class = CommentarySerializer
-    permission_classes = (IsAuthenticated,)
 
 
 class ProfileViewSet(
@@ -63,10 +56,10 @@ class ProfileViewSet(
         return queryset.distinct()
 
     @action(
-            methods=["POST"],
-            detail=True,
-            url_path="upload-profile-picture",
-            permission_classes=[IsAuthenticated],
+        methods=["POST"],
+        detail=True,
+        url_path="upload-profile-picture",
+        permission_classes=[IsAuthenticated],
     )
     def upload_profile_picture(self, reques, pk=None):
         profile = self.get_object()
@@ -79,31 +72,32 @@ class ProfileViewSet(
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-
-class FollowView(viewsets.ViewSet):
-    queryset = get_user_model().objects.all()
-
-    def follow(self, request, pk):
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="toggle-follow",
+        permission_classes=[IsAuthenticated],
+    )
+    def toggle_follow(self, request, pk=None):
         own_profile = request.user.profile
-        follow_user = self.queryset.get(profile__id=pk)
-        own_profile.follows.add(follow_user)
-        return Response(
-            {"message": f"now you are following {follow_user.profile}"},
-            status=status.HTTP_200_OK
-        )
-
-    def unfollow(self, request, pk):
-        own_profile = request.user.profile
-        follow_user = self.queryset.get(profile__id=pk)
-        own_profile.follows.remove(follow_user)
-        return Response(
+        follow_user = get_user_model().objects.get(profile__id=pk)
+        if follow_user in own_profile.follows.all():
+            own_profile.follows.remove(follow_user)
+            return Response(
             {"message": f"you are no longer following {follow_user.profile}"},
-            status=status.HTTP_200_OK
-        )
+                status=status.HTTP_200_OK
+            )
+        else:
+            own_profile.follows.add(follow_user)
+            return Response(
+            {"message": f"now you are following {follow_user.profile}"},
+                status=status.HTTP_200_OK
+            )
 
 
 class PostListCreateView(generics.ListCreateAPIView):
-    queryset = Post.objects.select_related("posted_by__profile").annotate(comments_number=Count("comments"))
+    queryset = (Post.objects.select_related("posted_by__profile")
+                .annotate(comments_number=Count("comments")))
     serializer_class = PostSerializer
     permission_classes = (IsAuthenticated,)
 
