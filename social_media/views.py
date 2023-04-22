@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from rest_framework import generics, viewsets, mixins, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -77,6 +78,28 @@ class ProfileViewSet(
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class FollowView(viewsets.ViewSet):
+    queryset = get_user_model().objects.all()
+
+    def follow(self, request, pk):
+        own_profile = request.user.profile
+        follow_user = self.queryset.get(profile__id=pk)
+        own_profile.follows.add(follow_user)
+        return Response(
+            {"message": f"now you are following {follow_user.profile}"},
+            status=status.HTTP_200_OK
+        )
+
+    def unfollow(self, request, pk):
+        own_profile = request.user.profile
+        follow_user = self.queryset.get(profile__id=pk)
+        own_profile.follows.remove(follow_user)
+        return Response(
+            {"message": f"you are no longer following {follow_user.profile}"},
+            status=status.HTTP_200_OK
+        )
 
 
 class PostViewSet(

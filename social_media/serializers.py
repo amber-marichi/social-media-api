@@ -35,9 +35,10 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class FollowerSerializer(serializers.ModelSerializer):
     profilename = serializers.CharField(source="profile.username", read_only=True)
+    id = serializers.IntegerField(source="profile.id", read_only=True)
     class Meta:
         model = get_user_model()
-        fields = ("profilename",)
+        fields = ("id", "profilename",)
 
 
 class ProfileDetailSerializer(ProfileSerializer):
