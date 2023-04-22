@@ -60,15 +60,20 @@ class ProfileDetailSerializer(ProfileSerializer):
 
 
 class PostSerializer(serializers.ModelSerializer):
-    comments = CommentarySerializer(many=True, read_only=True)
+    posted_by = serializers.CharField(source="posted_by.profile.username", read_only=True)
     class Meta:
         model = Post
         fields = (
+            "id",
             "posted_by",
             "created_at",
             "body",
             "tags",
             # "attachement",
-            "comments",
+            # "comments",
         )
+        read_only_fields = ("id", "created_at",)
 
+
+class PostDetailSerializer(PostSerializer):
+    comments = CommentarySerializer(many=True, read_only=True)

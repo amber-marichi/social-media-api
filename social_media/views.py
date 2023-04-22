@@ -1,6 +1,7 @@
-from rest_framework import viewsets, mixins, status
+from rest_framework import generics, viewsets, mixins, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.serializers import Serializer
 
@@ -13,7 +14,8 @@ from social_media.serializers import (
     CommentarySerializer,
     ProfileSerializer,
     ProfileDetailSerializer,
-    PostSerializer
+    PostSerializer,
+    PostDetailSerializer
 )
 
 
@@ -59,6 +61,12 @@ class ProfileViewSet(
 
         return queryset.distinct()
 
+    @action(
+            methods=["POST"],
+            detail=True,
+            url_path="upload-profile-picture",
+            permission_classes=[IsAuthenticated],
+    )
     def upload_profile_picture(self, reques, pk=None):
         profile = self.get_object()
         serializer = self.get_serializer(profile, data=reques.data)
@@ -71,7 +79,33 @@ class ProfileViewSet(
         serializer.save(user=self.request.user)
 
 
-class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all()
+class PostViewSet(
+    viewsets.GenericViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin
+):
+    queryset = Post.objects.select_related("posted_by__profile")
+    # serializer_class = PostSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_serializer_class(self):
+        if action == "retrieve":
+            return PostDetailSerializer
+        
+        return PostSerializer
+
+    def get_queryset(self):
+        queryset = self.queryset
+
+        if action == "retrieve":
+            queryset.prefetch_related("comments__user__profile")
+
+        return queryset
+
+
+class CreatePostView(generics.CreateAPIView):
     serializer_class = PostSerializer
     permission_classes = (IsAuthenticated,)
+
+    def perform_create(self, serializer):
+        serializer.save(posted_by=self.request.user)
