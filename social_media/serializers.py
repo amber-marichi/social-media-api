@@ -10,12 +10,10 @@ from social_media.models import (
 
 
 class CommentarySerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(
-        many=False, read_only=True, slug_field="profile.username"
-    )
+    user = serializers.CharField(source="user.profile.username", read_only=True)
     class Meta:
         model = Commentary
-        fields = ("id", "user", "post", "created_at", "body")
+        fields = ("id", "user", "created_at", "body")
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -62,6 +60,7 @@ class ProfileDetailSerializer(ProfileSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     posted_by = serializers.CharField(source="posted_by.profile.username", read_only=True)
+    comments_number = serializers.IntegerField(read_only=True)
     class Meta:
         model = Post
         fields = (
@@ -71,10 +70,23 @@ class PostSerializer(serializers.ModelSerializer):
             "body",
             "tags",
             "attachment",
-            # "comments",
+            "comments_number",
         )
         read_only_fields = ("id", "created_at",)
 
 
 class PostDetailSerializer(PostSerializer):
     comments = CommentarySerializer(many=True, read_only=True)
+    posted_by = serializers.CharField(source="posted_by.profile.username", read_only=True)
+    class Meta:
+        model = Post
+        fields = (
+            "id",
+            "posted_by",
+            "created_at",
+            "body",
+            "tags",
+            "attachment",
+            "comments",
+        )
+        read_only_fields = ("id", "created_at",)

@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Count
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, mixins, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.viewsets import GenericViewSet
 from rest_framework.serializers import Serializer
 
 from social_media.models import (
@@ -34,7 +35,6 @@ class ProfileViewSet(
     mixins.RetrieveModelMixin
 ):
     queryset = Profile.objects.prefetch_related("follows__profile")
-    # serializer_class = ProfileSerializer
     permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self) -> type[Serializer]:
@@ -102,45 +102,25 @@ class FollowView(viewsets.ViewSet):
         )
 
 
-class PostViewSet(
-    viewsets.GenericViewSet,
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin
-):
-    queryset = Post.objects.select_related("posted_by__profile")
-    # serializer_class = PostSerializer
-    permission_classes = (IsAuthenticated,)
-
-    def get_serializer_class(self):
-        if action == "retrieve":
-            return PostDetailSerializer
-        
-        return PostSerializer
-
-    def get_queryset(self):
-        queryset = self.queryset
-
-        if action == "retrieve":
-            queryset.prefetch_related("comments__user__profile")
-
-        return queryset
-
-    @action(detail=True, methods=['post'])
-    def post_comment(self, request, pk=None):
-        post = self.get_object()
-        serializer = CommentarySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(post=post, user=self.request.user)
-            return Response(
-                {"message": "comment posted"},
-                status=status.HTTP_200_OK
-        )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class CreatePostView(generics.CreateAPIView):
+class PostListCreateView(generics.ListCreateAPIView):
+    queryset = Post.objects.select_related("posted_by__profile").annotate(comments_number=Count("comments"))
     serializer_class = PostSerializer
     permission_classes = (IsAuthenticated,)
 
     def perform_create(self, serializer):
         serializer.save(posted_by=self.request.user)
+
+
+class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Post.objects.prefetch_related("comments__user__profile")
+    serializer_class = PostDetailSerializer
+    permission_classes = (IsAuthenticated,)
+
+
+class CommentPostView(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CommentarySerializer
+
+    def perform_create(self, serializer):
+        post = get_object_or_404(Post, pk=self.kwargs.get("pk"))
+        serializer.save(post=post, user=self.request.user)

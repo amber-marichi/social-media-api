@@ -47,13 +47,6 @@ class Profile(models.Model):
         return self.username
 
 
-# class Tag(models.Model):
-#     name = models.CharField(max_length=100, unique=True)
-
-#     def __str__(self) -> str:
-#         return self.name
-
-
 class Post(models.Model):
     posted_by = models.ForeignKey(
         to=AUTH_USER_MODEL,
@@ -63,11 +56,6 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     body = models.CharField(max_length=255)
     tags = models.CharField(max_length=100, null=True, blank=True)
-    # tags = models.ManyToManyField(
-    #     to=Tag,
-    #     blank=True,
-    #     related_name="tasks"
-    # )
     attachment = models.ImageField(
         upload_to=get_image_file_path,
         null=True,
@@ -91,6 +79,9 @@ class Commentary(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     body = models.CharField(max_length=255)
+
+    class Meta:
+        ordering = ["created_at"]
 
     def __str__(self) -> str:
         return f"comment {self.id} for post {self.post.id}"

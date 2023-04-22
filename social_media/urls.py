@@ -4,20 +4,22 @@ from rest_framework import routers
 from social_media.views import (
     CommentaryViewSet,
     ProfileViewSet,
-    PostViewSet,
-    CreatePostView,
-    FollowView
+    FollowView,
+    PostListCreateView,
+    PostDetailView,
+    CommentPostView,
 )
 
 
 router = routers.DefaultRouter()
 router.register("comments", CommentaryViewSet)
 router.register("profiles", ProfileViewSet)
-router.register("posts", PostViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("create_post/", CreatePostView.as_view(), name="create-post"),
+    path("posts/", PostListCreateView.as_view(), name="post-list-create"),
+    path("posts/<int:pk>/", PostDetailView.as_view(), name="post-detail"),
+    path("posts/<int:pk>/comment", CommentPostView.as_view(), name="post-comment"),
     path("follow/<int:pk>/", FollowView.as_view({"post": "follow"})),
     path("unfollow/<int:pk>/", FollowView.as_view({"post": "unfollow"})),
 ]
