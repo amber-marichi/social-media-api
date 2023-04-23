@@ -8,7 +8,6 @@ from social_media_api.settings import AUTH_USER_MODEL
 
 def get_image_file_path(instance, filename) -> str:
     _, extension = os.path.splitext(filename)
-    print(instance.__dict__)
     filename = getattr(instance, "username", None)
     if filename is not None:
         dir = "users"
@@ -85,4 +84,3 @@ class Commentary(models.Model):
 
     def __str__(self) -> str:
         return f"comment {self.id} for post {self.post.id}"
-    

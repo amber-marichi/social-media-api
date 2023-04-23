@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.serializers import Serializer
 
 from social_media.models import (
+    Commentary,
     Profile,
     Post
 )
@@ -55,7 +56,7 @@ class ProfileViewSet(
 
         return queryset.distinct()
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer) -> None:
         serializer.save(user=self.request.user)
 
     @action(
@@ -101,7 +102,7 @@ class PostListCreateView(generics.ListCreateAPIView):
     serializer_class = PostSerializer
     permission_classes = (IsAuthenticated,)
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer) -> None:
         serializer.save(posted_by=self.request.user)
     
     def get_queryset(self) -> QuerySet:
@@ -124,10 +125,28 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated,)
 
 
-class CommentPostView(generics.CreateAPIView):
+class CommentListPostView(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = CommentarySerializer
+    queryset = Commentary.objects.select_related("post", "user__profile")
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer) -> None:
         post = get_object_or_404(Post, pk=self.kwargs.get("pk"))
         serializer.save(post=post, user=self.request.user)
+
+    def list(self, request, *args, **kwargs) -> Response:
+        queryset = self.get_queryset()
+        queryset = queryset.filter(post_id=kwargs.get("pk"))
+        serializer = CommentarySerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class CommentDetailUpdateView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CommentarySerializer
+    queryset = Commentary.objects.select_related("post", "user__profile")
+
+    def get_queryset(self) -> QuerySet:
+        queryset = self.queryset
+        queryset = queryset.filter(post_id=self.kwargs.get("pi"))
+        return queryset
