@@ -18,6 +18,25 @@ def get_image_file_path(instance, filename) -> str:
     return os.path.join("upload/", dir, fullname)
 
 
+class Post(models.Model):
+    posted_by = models.ForeignKey(
+        to=AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="posts"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    body = models.CharField(max_length=255)
+    tags = models.CharField(max_length=100, null=True, blank=True)
+    attachment = models.ImageField(
+        upload_to=get_image_file_path,
+        null=True,
+        blank=True
+    )
+
+    def __str__(self) -> str:
+        return f"post # {self.id}"
+
+
 class Profile(models.Model):
     user = models.OneToOneField(
         AUTH_USER_MODEL,
@@ -41,28 +60,14 @@ class Profile(models.Model):
         symmetrical=False,
         related_name="followed_by",
     )
+    likes = models.ManyToManyField(
+        to=Post,
+        blank=True,
+        related_name="liked",
+    )
 
     def __str__(self) -> str:
         return self.username
-
-
-class Post(models.Model):
-    posted_by = models.ForeignKey(
-        to=AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="posts"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    body = models.CharField(max_length=255)
-    tags = models.CharField(max_length=100, null=True, blank=True)
-    attachment = models.ImageField(
-        upload_to=get_image_file_path,
-        null=True,
-        blank=True
-    )
-
-    def __str__(self) -> str:
-        return f"post # {self.id}"
 
 
 class Commentary(models.Model):

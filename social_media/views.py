@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, mixins, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.serializers import Serializer
 
 from social_media.models import (
@@ -91,14 +91,14 @@ class ProfileViewSet(
         else:
             own_profile.follows.add(follow_user)
             return Response(
-            {"message": f"now you are following {follow_user.profile}"},
+            {"message": f"you are following {follow_user.profile}"},
                 status=status.HTTP_200_OK
             )
 
 
 class PostListCreateView(generics.ListCreateAPIView):
     queryset = (Post.objects.select_related("posted_by__profile")
-                .annotate(comments_number=Count("comments")))
+                .annotate(commented=Count("comments"), likes=Count("liked")))
     serializer_class = PostSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -120,9 +120,27 @@ class PostListCreateView(generics.ListCreateAPIView):
 
 
 class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Post.objects.prefetch_related("comments__user__profile")
+    queryset = Post.objects.prefetch_related("comments__user__profile").annotate(likes=Count("liked"))
     serializer_class = PostDetailSerializer
     permission_classes = (IsAuthenticated,)
+
+
+@api_view(["GET"])
+def like_post(request, pk) -> Response:
+    own_profile = request.user.profile
+    post = get_object_or_404(Post, pk=pk)
+    if post in own_profile.likes.all():
+        own_profile.likes.remove(post)
+        return Response(
+        {"message": f"you are no longer liking post# {post.id}"},
+            status=status.HTTP_200_OK
+        )
+    else:
+        own_profile.likes.add(post)
+        return Response(
+        {"message": f"you are liking post# {post.id}"},
+            status=status.HTTP_200_OK
+        )
 
 
 class CommentListPostView(generics.ListCreateAPIView):

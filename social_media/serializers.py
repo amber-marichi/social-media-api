@@ -59,7 +59,8 @@ class ProfileDetailSerializer(ProfileSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     posted_by = serializers.CharField(source="posted_by.profile.username", read_only=True)
-    comments_number = serializers.IntegerField(read_only=True)
+    commented = serializers.IntegerField(read_only=True)
+    likes = serializers.IntegerField(read_only=True)
     class Meta:
         model = Post
         fields = (
@@ -69,7 +70,8 @@ class PostSerializer(serializers.ModelSerializer):
             "body",
             "tags",
             "attachment",
-            "comments_number",
+            "likes",
+            "commented",
         )
         read_only_fields = ("id", "created_at",)
 
@@ -77,6 +79,7 @@ class PostSerializer(serializers.ModelSerializer):
 class PostDetailSerializer(PostSerializer):
     comments = CommentarySerializer(many=True, read_only=True)
     posted_by = serializers.CharField(source="posted_by.profile.username", read_only=True)
+    likes = serializers.IntegerField(read_only=True)
     class Meta:
         model = Post
         fields = (
@@ -86,6 +89,7 @@ class PostDetailSerializer(PostSerializer):
             "body",
             "tags",
             "attachment",
+            "likes",
             "comments",
         )
         read_only_fields = ("id", "created_at",)
