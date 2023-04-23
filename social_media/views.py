@@ -1,7 +1,6 @@
-from django.contrib.auth import get_user_model
 from django.db.models import Count, QuerySet
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, viewsets, mixins, status
+from rest_framework import generics, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action, api_view
@@ -22,14 +21,15 @@ from social_media.serializers import (
 
 
 class ProfileViewSet(
-    viewsets.GenericViewSet,
-    mixins.CreateModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
-    mixins.DestroyModelMixin
+    viewsets.ModelViewSet
+    # viewsets.GenericViewSet,
+    # mixins.CreateModelMixin,
+    # mixins.UpdateModelMixin,
+    # mixins.ListModelMixin,
+    # mixins.RetrieveModelMixin,
+    # mixins.DestroyModelMixin
 ):
-    queryset = Profile.objects.select_related("user").prefetch_related("follows__profile")
+    queryset = Profile.objects.select_related("user").prefetch_related("follows")
     permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self) -> type[Serializer]:
@@ -75,48 +75,48 @@ class ProfileViewSet(
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
-        methods=["POST"],
+        methods=["GET"],
         detail=True,
         url_path="toggle-follow",
         permission_classes=[IsAuthenticated],
     )
     def toggle_follow(self, request, pk=None) -> Response:
         own_profile = request.user.profile
-        follow_user = get_user_model().objects.get(profile__id=pk)
+        follow_user = get_object_or_404(Profile, pk=pk)
         if follow_user in own_profile.follows.all():
             own_profile.follows.remove(follow_user)
             return Response(
-            {"message": f"you are no longer following {follow_user.profile}"},
+            {"message": f"you are no longer following {follow_user}"},
                 status=status.HTTP_200_OK
             )
         else:
             own_profile.follows.add(follow_user)
             return Response(
-            {"message": f"you are following {follow_user.profile}"},
+            {"message": f"you are following {follow_user}"},
                 status=status.HTTP_200_OK
             )
 
     @action(detail=False, methods=["GET"])
-    def following_profiles(self, request) -> Response:
-        profiles = self.get_queryset().filter(user__followed_by__in=[request.user.profile])
+    def followed_profiles(self, request) -> Response:
+        profiles = request.user.profile.follows.all()
         serializer = self.get_serializer(profiles, many=True)
         return Response(serializer.data)
     
     @action(detail=False, methods=["GET"])
     def followed_by_profiles(self, request) -> Response:
-        profiles = self.get_queryset().filter(follows__in=[request.user])
+        profiles = request.user.profile.followed_by.all()
         serializer = self.get_serializer(profiles, many=True)
         return Response(serializer.data)
  
 
 class PostListCreateView(generics.ListCreateAPIView):
-    queryset = (Post.objects.select_related("posted_by__profile")
+    queryset = (Post.objects.select_related("posted_by")
                 .annotate(commented=Count("comments"), likes=Count("liked")))
     serializer_class = PostSerializer
     permission_classes = (IsAuthenticated,)
 
     def perform_create(self, serializer) -> None:
-        serializer.save(posted_by=self.request.user)
+        serializer.save(posted_by=self.request.user.profile)
     
     def get_queryset(self) -> QuerySet:
         tag = self.request.query_params.get("tags")
@@ -127,13 +127,14 @@ class PostListCreateView(generics.ListCreateAPIView):
         if tag:
             queryset = queryset.filter(tags__icontains=tag)
         if user:
-            queryset = queryset.filter(posted_by__profile__username__icontains=user)
+            queryset = queryset.filter(posted_by__username__icontains=user)
 
         return queryset.distinct()
 
 
 class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Post.objects.prefetch_related("comments__user__profile").annotate(likes=Count("liked"))
+    queryset = (Post.objects.prefetch_related("comments__user")
+                .annotate(likes=Count("liked")))
     serializer_class = PostDetailSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -145,13 +146,13 @@ def like_post(request, pk) -> Response:
     if post in own_profile.likes.all():
         own_profile.likes.remove(post)
         return Response(
-        {"message": f"you are no longer liking post# {post.id}"},
+            {"message": f"you are no longer liking post# {post.id}"},
             status=status.HTTP_200_OK
         )
     else:
         own_profile.likes.add(post)
         return Response(
-        {"message": f"you are liking post# {post.id}"},
+            {"message": f"you are liking post# {post.id}"},
             status=status.HTTP_200_OK
         )
 
@@ -159,11 +160,11 @@ def like_post(request, pk) -> Response:
 class CommentListPostView(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = CommentarySerializer
-    queryset = Commentary.objects.select_related("post", "user__profile")
+    queryset = Commentary.objects.select_related("post", "user")
 
     def perform_create(self, serializer) -> None:
         post = get_object_or_404(Post, pk=self.kwargs.get("pk"))
-        serializer.save(post=post, user=self.request.user)
+        serializer.save(post=post, user=self.request.user.profile)
 
     def list(self, request, *args, **kwargs) -> Response:
         queryset = self.get_queryset()
@@ -175,9 +176,8 @@ class CommentListPostView(generics.ListCreateAPIView):
 class CommentDetailUpdateView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = CommentarySerializer
-    queryset = Commentary.objects.select_related("post", "user__profile")
+    queryset = Commentary.objects.select_related("post", "user")
 
     def get_queryset(self) -> QuerySet:
-        queryset = self.queryset
-        queryset = queryset.filter(post_id=self.kwargs.get("pi"))
+        queryset = self.queryset.filter(post_id=self.kwargs.get("pi"))
         return queryset

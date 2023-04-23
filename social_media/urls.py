@@ -28,7 +28,7 @@ urlpatterns = [
         CommentDetailUpdateView.as_view(),
         name="post-detail"
     ),
-    path("posts/<int:pk>/like/", like_post, name="like-post"),
+    path("posts/<int:pk>/toggle-like/", like_post, name="like-post"),
 ]
 
 app_name = "social"

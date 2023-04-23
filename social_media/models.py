@@ -20,7 +20,7 @@ def get_image_file_path(instance, filename) -> str:
 
 class Post(models.Model):
     posted_by = models.ForeignKey(
-        to=AUTH_USER_MODEL,
+        to="Profile",
         on_delete=models.CASCADE,
         related_name="posts"
     )
@@ -32,6 +32,9 @@ class Post(models.Model):
         null=True,
         blank=True
     )
+
+    class Meta:
+        ordering = ["-created_at"]
 
     def __str__(self) -> str:
         return f"post # {self.id}"
@@ -55,7 +58,7 @@ class Profile(models.Model):
         blank=True
     )
     follows = models.ManyToManyField(
-        to=AUTH_USER_MODEL,
+        to="self",
         blank=True,
         symmetrical=False,
         related_name="followed_by",
@@ -66,13 +69,16 @@ class Profile(models.Model):
         related_name="liked",
     )
 
+    class Meta:
+        ordering = ["username"]
+
     def __str__(self) -> str:
         return self.username
 
 
 class Commentary(models.Model):
     user = models.ForeignKey(
-        to=AUTH_USER_MODEL,
+        to=Profile,
         on_delete=models.CASCADE,
         related_name="comments"
     )
@@ -86,6 +92,7 @@ class Commentary(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+        verbose_name_plural = "commentaries"
 
     def __str__(self) -> str:
         return f"comment {self.id} for post {self.post.id}"
