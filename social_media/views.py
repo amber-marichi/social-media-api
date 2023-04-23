@@ -147,6 +147,16 @@ def get_user_posts(request) -> Response:
 
 
 @api_view(["GET"])
+def get_followed_posts(request) -> Response:
+    posts = (Post.objects.select_related("posted_by")
+                .annotate(commented=Count("comments"), likes=Count("liked")))
+    followed_profiles = request.user.profile.follows.all()
+    posts = posts.filter(posted_by__in=followed_profiles)
+    serializer = PostSerializer(posts, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
 def like_post(request, pk) -> Response:
     own_profile = request.user.profile
     post = get_object_or_404(Post, pk=pk)
