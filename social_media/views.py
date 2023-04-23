@@ -1,9 +1,11 @@
 from django.db.models import Count, QuerySet
 from django.shortcuts import get_object_or_404
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import generics, viewsets, status
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.serializers import Serializer
 
 from social_media.models import (
@@ -58,6 +60,33 @@ class ProfileViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer) -> None:
         serializer.save(user=self.request.user)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "username",
+                type=OpenApiTypes.STR,
+                description="Filter by author username (ex. ?username=munin)",
+            ),
+            OpenApiParameter(
+                "first_name",
+                type=OpenApiTypes.STR,
+                description="Filter by author first_name (ex. ?first_name=Leo)",
+            ),
+            OpenApiParameter(
+                "last_name",
+                type=OpenApiTypes.STR,
+                description="Filter by author last_name (ex. ?last_name=Sanchez)",
+            ),
+            OpenApiParameter(
+                "location",
+                type=OpenApiTypes.STR,
+                description="Filter by author location (ex. ?location=Madrid)",
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     @action(
         methods=["POST"],
         detail=True,
@@ -77,6 +106,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         url_path="toggle-follow",
     )
     def toggle_follow(self, request, pk=None) -> Response:
+        """Toggle to follow/unfollow user profile"""
         own_profile = request.user.profile
         follow_user = get_object_or_404(Profile, pk=pk)
         if follow_user in own_profile.follows.all():
@@ -98,6 +128,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         url_path="user-profile",
     )
     def get_user_profile(self, request) -> Response:
+        """Get your profile"""
         serializer = ProfileDetailSerializer(request.user.profile)
         return Response(serializer.data)
 
@@ -107,6 +138,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         url_path="followed-profiles",
     )
     def get_followed_profiles(self, request) -> Response:
+        """Get profiles of users who you follow"""
         profiles = request.user.profile.follows.all()
         serializer = self.get_serializer(profiles, many=True)
         return Response(serializer.data)
@@ -117,6 +149,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         url_path="following-profiles",
     )
     def get_following_profiles(self, request) -> Response:
+        """Get profiles of users who are following you"""
         profiles = request.user.profile.followed_by.all()
         serializer = self.get_serializer(profiles, many=True)
         return Response(serializer.data)
@@ -144,6 +177,23 @@ class PostListCreateView(generics.ListCreateAPIView):
 
         return queryset.distinct()
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "tags",
+                type=OpenApiTypes.STR,
+                description="Filter by tag in posts (ex. ?tags=snow)",
+            ),
+            OpenApiParameter(
+                "user",
+                type=OpenApiTypes.STR,
+                description="Filter by author username (ex. ?user=Larry)",
+            ),
+        ]
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
 
 class PostDetailUpdateView(generics.RetrieveUpdateDestroyAPIView):
     queryset = (Post.objects.prefetch_related("comments__user")
@@ -155,6 +205,7 @@ class PostDetailUpdateView(generics.RetrieveUpdateDestroyAPIView):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,])
 def get_user_posts(request) -> Response:
+    """Get all posts by created by you"""
     own_posts = request.user.profile.posts.all()
     serializer = PostSerializer(own_posts, many=True)
     return Response(serializer.data)
@@ -163,6 +214,7 @@ def get_user_posts(request) -> Response:
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,])
 def get_followed_posts(request) -> Response:
+    """Get all posts by users followed by you"""
     posts = (Post.objects.select_related("posted_by")
                 .annotate(commented=Count("comments"), likes=Count("liked")))
     followed_profiles = request.user.profile.follows.all()
@@ -174,6 +226,7 @@ def get_followed_posts(request) -> Response:
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,])
 def like_post(request, pk) -> Response:
+    """Toggle to like/unlike posts"""
     own_profile = request.user.profile
     post = get_object_or_404(Post, pk=pk)
     if post in own_profile.likes.all():
