@@ -7,6 +7,7 @@ from social_media.views import (
     PostDetailView,
     CommentListPostView,
     CommentDetailUpdateView,
+    get_user_posts,
     like_post,
 )
 
@@ -29,6 +30,7 @@ urlpatterns = [
         name="post-detail"
     ),
     path("posts/<int:pk>/toggle-like/", like_post, name="like-post"),
+    path("posts/my-posts/", get_user_posts, name="user-posts"),
 ]
 
 app_name = "social"

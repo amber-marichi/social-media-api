@@ -30,7 +30,7 @@ class ProfileViewSet(
     # mixins.DestroyModelMixin
 ):
     queryset = Profile.objects.select_related("user").prefetch_related("follows")
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self) -> type[Serializer]:
         if self.action == "retrieve":
@@ -113,7 +113,7 @@ class PostListCreateView(generics.ListCreateAPIView):
     queryset = (Post.objects.select_related("posted_by")
                 .annotate(commented=Count("comments"), likes=Count("liked")))
     serializer_class = PostSerializer
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def perform_create(self, serializer) -> None:
         serializer.save(posted_by=self.request.user.profile)
@@ -136,7 +136,14 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = (Post.objects.prefetch_related("comments__user")
                 .annotate(likes=Count("liked")))
     serializer_class = PostDetailSerializer
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
+
+
+@api_view(["GET"])
+def get_user_posts(request) -> Response:
+    own_posts = request.user.profile.posts.all()
+    serializer = PostSerializer(own_posts, many=True)
+    return Response(serializer.data)
 
 
 @api_view(["GET"])
@@ -158,7 +165,7 @@ def like_post(request, pk) -> Response:
 
 
 class CommentListPostView(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
     serializer_class = CommentarySerializer
     queryset = Commentary.objects.select_related("post", "user")
 
@@ -174,7 +181,7 @@ class CommentListPostView(generics.ListCreateAPIView):
 
 
 class CommentDetailUpdateView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
     serializer_class = CommentarySerializer
     queryset = Commentary.objects.select_related("post", "user")
 
