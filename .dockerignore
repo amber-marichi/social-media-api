@@ -1,0 +1,15 @@
+venv/
+python-version
+.env
+.git*
+docker*
+Docker*
+media
+.idea/
+.vscode/
+*.iml
+.DS_Store
+.pytest_cache/
+**__pycache__/
+**db.sqlite3
+media
