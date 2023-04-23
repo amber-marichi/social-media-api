@@ -15,6 +15,14 @@ class CommentarySerializer(serializers.ModelSerializer):
         fields = ("id", "user", "created_at", "body")
 
 
+class FollowingSerializer(serializers.ModelSerializer):
+    profilename = serializers.CharField(source="profile.username", read_only=True)
+    id = serializers.IntegerField(source="profile.id", read_only=True)
+    class Meta:
+        model = get_user_model()
+        fields = ("id", "profilename",)
+
+
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
@@ -30,17 +38,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         )
 
 
-class FollowerSerializer(serializers.ModelSerializer):
-    profilename = serializers.CharField(source="profile.username", read_only=True)
-    id = serializers.IntegerField(source="profile.id", read_only=True)
-    class Meta:
-        model = get_user_model()
-        fields = ("id", "profilename",)
-
-
 class ProfileDetailSerializer(ProfileSerializer):
-    follows = FollowerSerializer(many=True, read_only=True)
-    followed_by = FollowerSerializer(many=True, read_only=True)
+    follows = FollowingSerializer(many=True, read_only=True)
     class Meta:
         model = Profile
         fields = (
@@ -53,7 +52,6 @@ class ProfileDetailSerializer(ProfileSerializer):
             "bio",
             "profile_picture",
             "follows",
-            "followed_by"
         )
 
 

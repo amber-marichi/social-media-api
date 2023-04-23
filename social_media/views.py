@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count, QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, mixins, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action, api_view
 from rest_framework.serializers import Serializer
@@ -29,7 +29,7 @@ class ProfileViewSet(
     mixins.RetrieveModelMixin,
     mixins.DestroyModelMixin
 ):
-    queryset = Profile.objects.prefetch_related("follows__profile")
+    queryset = Profile.objects.select_related("user").prefetch_related("follows__profile")
     permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self) -> type[Serializer]:
@@ -96,6 +96,18 @@ class ProfileViewSet(
                 status=status.HTTP_200_OK
             )
 
+    @action(detail=False, methods=["GET"])
+    def following_profiles(self, request) -> Response:
+        profiles = self.get_queryset().filter(user__followed_by__in=[request.user.profile])
+        serializer = self.get_serializer(profiles, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=["GET"])
+    def followed_by_profiles(self, request) -> Response:
+        profiles = self.get_queryset().filter(follows__in=[request.user])
+        serializer = self.get_serializer(profiles, many=True)
+        return Response(serializer.data)
+ 
 
 class PostListCreateView(generics.ListCreateAPIView):
     queryset = (Post.objects.select_related("posted_by__profile")
