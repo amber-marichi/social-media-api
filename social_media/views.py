@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.serializers import Serializer
 
 from social_media.models import (
@@ -19,6 +19,12 @@ from social_media.serializers import (
     PostDetailSerializer
 )
 
+from social_media.permissions import (
+    IsOwnerOrReadOnlyComment,
+    IsOwnerOrReadOnlyProfile,
+    IsOwnerOrReadOnlyPost,
+)
+
 
 class ProfileViewSet(
     viewsets.ModelViewSet
@@ -30,7 +36,7 @@ class ProfileViewSet(
     # mixins.DestroyModelMixin
 ):
     queryset = Profile.objects.select_related("user").prefetch_related("follows")
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsOwnerOrReadOnlyProfile,)
 
     def get_serializer_class(self) -> type[Serializer]:
         if self.action == "retrieve":
@@ -64,7 +70,7 @@ class ProfileViewSet(
         methods=["POST"],
         detail=True,
         url_path="upload-profile-picture",
-        permission_classes=[IsAuthenticated],
+        permission_classes=(IsAuthenticated,),
     )
     def upload_profile_picture(self, reques, pk=None) -> Response:
         profile = self.get_object()
@@ -78,7 +84,7 @@ class ProfileViewSet(
         methods=["GET"],
         detail=True,
         url_path="toggle-follow",
-        permission_classes=[IsAuthenticated],
+        permission_classes=(IsAuthenticated,),
     )
     def toggle_follow(self, request, pk=None) -> Response:
         own_profile = request.user.profile
@@ -113,7 +119,7 @@ class PostListCreateView(generics.ListCreateAPIView):
     queryset = (Post.objects.select_related("posted_by")
                 .annotate(commented=Count("comments"), likes=Count("liked")))
     serializer_class = PostSerializer
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def perform_create(self, serializer) -> None:
         serializer.save(posted_by=self.request.user.profile)
@@ -132,14 +138,15 @@ class PostListCreateView(generics.ListCreateAPIView):
         return queryset.distinct()
 
 
-class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
+class PostDetailUpdateView(generics.RetrieveUpdateDestroyAPIView):
     queryset = (Post.objects.prefetch_related("comments__user")
                 .annotate(likes=Count("liked")))
     serializer_class = PostDetailSerializer
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsOwnerOrReadOnlyPost,)
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated,])
 def get_user_posts(request) -> Response:
     own_posts = request.user.profile.posts.all()
     serializer = PostSerializer(own_posts, many=True)
@@ -147,6 +154,7 @@ def get_user_posts(request) -> Response:
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated,])
 def get_followed_posts(request) -> Response:
     posts = (Post.objects.select_related("posted_by")
                 .annotate(commented=Count("comments"), likes=Count("liked")))
@@ -157,6 +165,7 @@ def get_followed_posts(request) -> Response:
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated,])
 def like_post(request, pk) -> Response:
     own_profile = request.user.profile
     post = get_object_or_404(Post, pk=pk)
@@ -174,10 +183,10 @@ def like_post(request, pk) -> Response:
         )
 
 
-class CommentListPostView(generics.ListCreateAPIView):
-    # permission_classes = (IsAuthenticated,)
+class CommentListCreateView(generics.ListCreateAPIView):
     serializer_class = CommentarySerializer
     queryset = Commentary.objects.select_related("post", "user")
+    permission_classes = (IsAuthenticated,)
 
     def perform_create(self, serializer) -> None:
         post = get_object_or_404(Post, pk=self.kwargs.get("pk"))
@@ -191,9 +200,9 @@ class CommentListPostView(generics.ListCreateAPIView):
 
 
 class CommentDetailUpdateView(generics.RetrieveUpdateDestroyAPIView):
-    # permission_classes = (IsAuthenticated,)
     serializer_class = CommentarySerializer
     queryset = Commentary.objects.select_related("post", "user")
+    permission_classes = (IsOwnerOrReadOnlyComment,)
 
     def get_queryset(self) -> QuerySet:
         queryset = self.queryset.filter(post_id=self.kwargs.get("pi"))
