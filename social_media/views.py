@@ -26,7 +26,8 @@ class ProfileViewSet(
     mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
     mixins.ListModelMixin,
-    mixins.RetrieveModelMixin
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin
 ):
     queryset = Profile.objects.prefetch_related("follows__profile")
     permission_classes = (IsAuthenticated,)
