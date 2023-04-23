@@ -26,15 +26,7 @@ from social_media.permissions import (
 )
 
 
-class ProfileViewSet(
-    viewsets.ModelViewSet
-    # viewsets.GenericViewSet,
-    # mixins.CreateModelMixin,
-    # mixins.UpdateModelMixin,
-    # mixins.ListModelMixin,
-    # mixins.RetrieveModelMixin,
-    # mixins.DestroyModelMixin
-):
+class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.select_related("user").prefetch_related("follows")
     permission_classes = (IsOwnerOrReadOnlyProfile,)
 
@@ -70,7 +62,6 @@ class ProfileViewSet(
         methods=["POST"],
         detail=True,
         url_path="upload-profile-picture",
-        permission_classes=(IsAuthenticated,),
     )
     def upload_profile_picture(self, reques, pk=None) -> Response:
         profile = self.get_object()
@@ -84,7 +75,6 @@ class ProfileViewSet(
         methods=["GET"],
         detail=True,
         url_path="toggle-follow",
-        permission_classes=(IsAuthenticated,),
     )
     def toggle_follow(self, request, pk=None) -> Response:
         own_profile = request.user.profile
@@ -102,14 +92,31 @@ class ProfileViewSet(
                 status=status.HTTP_200_OK
             )
 
-    @action(detail=False, methods=["GET"])
-    def followed_profiles(self, request) -> Response:
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="user-profile",
+    )
+    def get_user_profile(self, request) -> Response:
+        serializer = ProfileDetailSerializer(request.user.profile)
+        return Response(serializer.data)
+
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="followed-profiles",
+    )
+    def get_followed_profiles(self, request) -> Response:
         profiles = request.user.profile.follows.all()
         serializer = self.get_serializer(profiles, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=["GET"])
-    def followed_by_profiles(self, request) -> Response:
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="following-profiles",
+    )
+    def get_following_profiles(self, request) -> Response:
         profiles = request.user.profile.followed_by.all()
         serializer = self.get_serializer(profiles, many=True)
         return Response(serializer.data)
