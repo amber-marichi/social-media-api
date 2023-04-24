@@ -56,6 +56,14 @@ class ProfileViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(last_name__icontains=last_name)
 
         return queryset.distinct()
+    
+    def create(self, request, *args, **kwargs):
+        if Profile.objects.filter(user=request.user).exists():
+            return Response(
+                {"message": "user already has profile"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer) -> None:
         serializer.save(user=self.request.user)
