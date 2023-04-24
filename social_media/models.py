@@ -10,12 +10,12 @@ def get_image_file_path(instance, filename) -> str:
     _, extension = os.path.splitext(filename)
     filename = getattr(instance, "username", None)
     if filename is not None:
-        dir = "users"
+        dir_name = "users"
     else:
         filename = "post"
-        dir = "attachments"
+        dir_name = "attachments"
     fullname = f"{slugify(filename)}-{uuid.uuid4()}{extension}"
-    return os.path.join("upload/", dir, fullname)
+    return os.path.join("upload/", dir_name, fullname)
 
 
 class Post(models.Model):

@@ -29,7 +29,8 @@ from social_media.permissions import (
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
-    queryset = Profile.objects.select_related("user").prefetch_related("follows")
+    queryset = (Profile.objects.select_related("user")
+                .prefetch_related("follows"))
     permission_classes = (IsOwnerOrReadOnlyProfile,)
 
     def get_serializer_class(self) -> type[Serializer]:
@@ -56,7 +57,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(last_name__icontains=last_name)
 
         return queryset.distinct()
-    
+
     def create(self, request, *args, **kwargs):
         if Profile.objects.filter(user=request.user).exists():
             return Response(
@@ -78,17 +79,17 @@ class ProfileViewSet(viewsets.ModelViewSet):
             OpenApiParameter(
                 "first_name",
                 type=OpenApiTypes.STR,
-                description="Filter by author first_name (ex. ?first_name=Leo)",
+                description="Filter by author first_name (ex ?first_name=Leo)",
             ),
             OpenApiParameter(
                 "last_name",
                 type=OpenApiTypes.STR,
-                description="Filter by author last_name (ex. ?last_name=Sanchez)",
+                description="Filter by author last_name (ex ?last_name=Smith)",
             ),
             OpenApiParameter(
                 "location",
                 type=OpenApiTypes.STR,
-                description="Filter by author location (ex. ?location=Madrid)",
+                description="Filter by author location (ex ?location=Madrid)",
             ),
         ]
     )
@@ -120,13 +121,13 @@ class ProfileViewSet(viewsets.ModelViewSet):
         if follow_user in own_profile.follows.all():
             own_profile.follows.remove(follow_user)
             return Response(
-            {"message": f"you are no longer following {follow_user}"},
+                {"message": f"you are no longer following {follow_user}"},
                 status=status.HTTP_200_OK
             )
         else:
             own_profile.follows.add(follow_user)
             return Response(
-            {"message": f"you are following {follow_user}"},
+                {"message": f"you are following {follow_user}"},
                 status=status.HTTP_200_OK
             )
 
@@ -150,7 +151,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         profiles = request.user.profile.follows.all()
         serializer = self.get_serializer(profiles, many=True)
         return Response(serializer.data)
-    
+
     @action(
         methods=["GET"],
         detail=False,
@@ -161,7 +162,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         profiles = request.user.profile.followed_by.all()
         serializer = self.get_serializer(profiles, many=True)
         return Response(serializer.data)
- 
+
 
 class PostListCreateView(generics.ListCreateAPIView):
     queryset = (Post.objects.select_related("posted_by")
@@ -171,7 +172,7 @@ class PostListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer) -> None:
         serializer.save(posted_by=self.request.user.profile)
-    
+
     def get_queryset(self) -> QuerySet:
         tag = self.request.query_params.get("tags")
         user = self.request.query_params.get("user")
@@ -211,7 +212,7 @@ class PostDetailUpdateView(generics.RetrieveUpdateDestroyAPIView):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated,])
+@permission_classes([IsAuthenticated, ])
 def get_user_posts(request) -> Response:
     """Get all posts by created by you"""
     own_posts = request.user.profile.posts.all()
@@ -220,11 +221,11 @@ def get_user_posts(request) -> Response:
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated,])
+@permission_classes([IsAuthenticated, ])
 def get_followed_posts(request) -> Response:
     """Get all posts by users followed by you"""
     posts = (Post.objects.select_related("posted_by")
-                .annotate(commented=Count("comments"), likes=Count("liked")))
+             .annotate(commented=Count("comments"), likes=Count("liked")))
     followed_profiles = request.user.profile.follows.all()
     posts = posts.filter(posted_by__in=followed_profiles)
     serializer = PostSerializer(posts, many=True)
@@ -232,7 +233,7 @@ def get_followed_posts(request) -> Response:
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated,])
+@permission_classes([IsAuthenticated, ])
 def like_post(request, pk) -> Response:
     """Toggle to like/unlike posts"""
     own_profile = request.user.profile
