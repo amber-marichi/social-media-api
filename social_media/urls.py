@@ -8,6 +8,7 @@ from social_media.views import (
     CommentListCreateView,
     CommentDetailUpdateView,
     get_user_posts,
+    get_liked_posts,
     get_followed_posts,
     like_post,
 )
@@ -36,6 +37,7 @@ urlpatterns = [
     ),
     path("posts/<int:pk>/toggle-like/", like_post, name="like-post"),
     path("posts/user-posts/", get_user_posts, name="user-posts"),
+    path("posts/liked-posts/", get_liked_posts, name="liked-posts"),
     path("posts/followed-posts/", get_followed_posts, name="followed-posts"),
 ]
 

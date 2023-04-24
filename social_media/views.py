@@ -222,6 +222,15 @@ def get_user_posts(request) -> Response:
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, ])
+def get_liked_posts(request) -> Response:
+    """Get all posts by liked by you"""
+    liked_posts = request.user.profile.likes.all()
+    serializer = PostSerializer(liked_posts, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, ])
 def get_followed_posts(request) -> Response:
     """Get all posts by users followed by you"""
     posts = (Post.objects.select_related("posted_by")
